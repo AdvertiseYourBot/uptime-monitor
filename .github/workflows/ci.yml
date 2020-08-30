@@ -4,11 +4,19 @@ on: [push]
 
 jobs:
   deploy:
+    name: Deploy
     if: github.ref == 'refs/heads/master'
     runs-on: [ubuntu-latest]
     steps:
-      - uses: actions/checkout@v1
-      - name: Push to server
+      - uses: actions/checkout@v
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Test
+        run: npm test
+
+      - name: Deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_IP }}
