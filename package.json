@@ -2,14 +2,15 @@
   "name": "uptime-checker",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "tsc",
-    "start": "tsc && node dist/index.js"
+    "test": "tsc && rm -rf dist",
+    "start": "npm run build && node dist/index.js",
+    "build": "tsc"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Matthew Stead <matievisthekat@iplnyc.org>",
+  "license": "GPL-3.0",
   "dependencies": {
     "discord.js": "^12.3.1",
     "dotenv": "^8.2.0",
