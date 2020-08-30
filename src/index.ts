@@ -56,6 +56,7 @@ client.on("message", async (msg) => {
     const embed = new MessageEmbed()
       .setAuthor(bot.tag, bot.displayAvatarURL())
       .setColor(colour)
+      .setTitle(`Last checked: ${data.lastCheck}`)
       .setDescription(
         `Please note this bot only updates every **${interval} minutes**. Results may not display an accurate reading of the bot's current status`
       )
@@ -78,7 +79,7 @@ client.on("message", async (msg) => {
       ]);
 
     await getGraph(data, async (err, res) => {
-      embed.setImage(res.url + ".png");
+      embed.setImage(`${res.url}.png`);
       await msg.channel.send(embed);
     });
   } else if (cmd === "help") {
@@ -97,10 +98,10 @@ function round(num: number) {
 
 async function getGraph(data: ModelInterface, cb: Function) {
   const pingsPerDay = (24 * 60) / interval;
-  const uniqueDates = [...new Set<string>(data.pings.map((p: Ping) => p.date))];
+  const uniqueDates = [...new Set(data.pings.map((p) => p.date))];
   const dayStats = {};
   for (const date of uniqueDates) {
-    const pingsOnDate = data.pings.filter((p: Ping) => p.date === date).length;
+    const pingsOnDate = data.pings.filter((p) => p.date === date).length;
     const percentOnDate = round((pingsOnDate / pingsPerDay) * 100);
     dayStats[date] = percentOnDate;
   }
@@ -114,7 +115,7 @@ async function getGraph(data: ModelInterface, cb: Function) {
   ];
   const layout = {
     fileopt: "overwrite",
-    filename: "ayb_bot_uptime",
+    filename: `ayb_uptime_${data.id}`,
     format: "png",
   };
   await plot.plot(graphData, layout, cb);
