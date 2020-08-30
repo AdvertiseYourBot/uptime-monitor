@@ -81,6 +81,13 @@ client.on("message", async (msg) => {
       embed.setImage(res.url + ".png");
       await msg.channel.send(embed);
     });
+  } else if (cmd === "help") {
+    const embed = new MessageEmbed()
+      .setColor("BLUE")
+      .setDescription(
+        `This bot monitors and logs the uptime of all bots in the Advertise Your Bot discord server. Every **${interval} minutes** the bot checks the statuses of the bots. Please note this does not abuse the Discord API because the checking of bot statuses doesn't send any extra requests. If your bot is appearing invisible it will log as offline.\n\nUse \`${prefix}uptime {bot}\` to check a bot's information`
+      );
+    await msg.channel.send(embed);
   }
 });
 
