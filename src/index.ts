@@ -26,7 +26,7 @@ client.on("message", async (msg) => {
   const [command, ...args] = msg.content
     .slice(prefix.length)
     .trim()
-    .split(/ +gi/);
+    .split(/ +/gi);
   const cmd = command.toLowerCase();
 
   if (cmd === "uptime") {
@@ -120,4 +120,4 @@ Mongoose.connect(process.env.URI, {
 
 // 20 min: */20 * * * *
 // 1 min: * * * * *
-Cron.schedule("*/20 * * * *", () => require("./check")(client));
+Cron.schedule("*/20 * * * *", () => require("./check").default(client));
