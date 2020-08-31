@@ -115,7 +115,7 @@ async function getGraph(data: ModelInterface, cb: Function) {
   ];
   const layout = {
     fileopt: "overwrite",
-    filename: `ayb_uptime_${data.id}`,
+    filename: `ayb_uptime`,
     format: "png",
   };
   await plot.plot(graphData, layout, cb);
