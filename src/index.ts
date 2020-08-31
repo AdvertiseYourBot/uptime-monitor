@@ -101,7 +101,7 @@ async function getGraph(data: ModelInterface, cb: Function) {
   const uniqueDates = [...new Set(data.pings.map((p) => p.date))];
   const dayStats = {};
   for (const date of uniqueDates) {
-    const pingsOnDate = data.pings.filter((p) => p.date === date).length;
+    const pingsOnDate = data.pings.filter((p) => p.date === date && p.online).length;
     const percentOnDate = round((pingsOnDate / pingsPerDay) * 100);
     dayStats[date] = percentOnDate;
   }
