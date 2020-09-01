@@ -1,9 +1,11 @@
 import { Client, MessageEmbed } from "discord.js";
 import Cron from "node-cron";
-import Model, { Ping, ModelInterface } from "./Model";
+import Model, { ModelInterface } from "./Model";
 import Mongoose from "mongoose";
 import Plotly from "plotly";
 import { config } from "dotenv";
+import Axios from "axios";
+import { createWriteStream, readFileSync, unlinkSync } from "fs";
 
 const interval = 20;
 config();
@@ -42,6 +44,8 @@ client.on("message", async (msg) => {
         `That bot is not in our database. If you think it should be, please wait ${interval} minutes and try again`
       );
 
+    const m = await msg.channel.send(`Fetching data... Please wait`);
+
     const onlinePings = data.pings.filter((p) => p.online);
     const uptimePercent = round((onlinePings.length / data.pings.length) * 100);
     const colour =
@@ -78,10 +82,27 @@ client.on("message", async (msg) => {
         },
       ]);
 
-    await getGraph(data, async (err, res) => {
-      embed.setImage(`${res.url}.png`);
-      await msg.channel.send(embed);
-    });
+    getGraph(data, "./graph.png")
+      .then(async () => {
+        await m.edit("", embed);
+        await msg.channel.send(
+          "*Graphs are sent seperately to prevent inaccurate results due to Discord's image cache*",
+          {
+            files: [
+              {
+                name: "graph.png",
+                attachment: readFileSync("./graph.png"),
+              },
+            ],
+          }
+        );
+
+        unlinkSync("./graph.png");
+      })
+      .catch(
+        async (err) =>
+          await msg.channel.send(`Unexpected error: ${err.message}`)
+      );
   } else if (cmd === "help") {
     const embed = new MessageEmbed()
       .setColor("BLUE")
@@ -96,29 +117,52 @@ function round(num: number) {
   return Math.round(num * 10) / 10;
 }
 
-async function getGraph(data: ModelInterface, cb: Function) {
-  const pingsPerDay = (24 * 60) / interval;
-  const uniqueDates = [...new Set(data.pings.map((p) => p.date))];
-  const dayStats = {};
-  for (const date of uniqueDates) {
-    const pingsOnDate = data.pings.filter((p) => p.date === date && p.online).length;
-    const percentOnDate = round((pingsOnDate / pingsPerDay) * 100);
-    dayStats[date] = percentOnDate;
-  }
+function getGraph(data: ModelInterface, path: string): Promise<any> {
+  return new Promise(async (resolve, reject) => {
+    const pingsPerDay = (24 * 60) / interval;
+    const uniqueDates = [...new Set(data.pings.map((p) => p.date))];
+    const dayStats = {};
+    for (const date of uniqueDates) {
+      const pingsOnDate = data.pings.filter((p) => p.date === date && p.online)
+        .length;
+      const percentOnDate = round((pingsOnDate / pingsPerDay) * 100);
+      dayStats[date] = percentOnDate;
+    }
 
-  const graphData = [
-    {
-      x: Object.keys(dayStats),
-      y: Object.values(dayStats),
-      type: "line",
-    },
-  ];
-  const layout = {
-    fileopt: "overwrite",
-    filename: `ayb_uptime`,
-    format: "png",
-  };
-  await plot.plot(graphData, layout, cb);
+    const graphData = [
+      {
+        x: Object.keys(dayStats),
+        y: Object.values(dayStats),
+        type: "line",
+      },
+    ];
+    const layout = {
+      fileopt: "overwrite",
+      filename: `ayb_uptime`,
+      format: "png",
+    };
+    await plot.plot(
+      graphData,
+      layout,
+      async (err: any, graph: { url: string }) => {
+        if (err) return reject(err);
+
+        const url = `${graph.url}.${layout.format}`;
+        const writer = createWriteStream(path);
+
+        const res = await Axios({
+          url,
+          method: "GET",
+          responseType: "stream",
+        });
+
+        res.data.pipe(writer);
+
+        writer.on("finish", resolve);
+        writer.on("error", reject);
+      }
+    );
+  });
 }
 
 Mongoose.connect(process.env.URI, {
