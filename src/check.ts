@@ -1,5 +1,5 @@
 import Model, { Ping } from "./Model";
-import { Client, MessageEmbed } from "discord.js";
+import { Client, MessageEmbed, User, GuildMember } from "discord.js";
 import moment from "moment";
 import Axios from "axios";
 
@@ -9,7 +9,7 @@ export default async function (client: Client) {
   const ayb = client.guilds.cache.get(aybID);
   if (!ayb) throw new Error("AYB guild not found");
 
-  const botsOfflineOverHour = [];
+  const botsOfflineOverHour: User[] = [];
 
   const bots = client.users.cache
     .filter((u) => u.bot && ayb.members.cache.has(u.id))
@@ -40,22 +40,33 @@ export default async function (client: Client) {
   );
 
   if (botsOfflineOverHour.length > 0) {
+    const owners: GuildMember[] = [];
     const wh = await client
       .fetchWebhook(process.env.WH_ID, process.env.WH_TOKEN)
       .catch(() => {});
+
+    botsOfflineOverHour.forEach(async (bot) => {
+      const aybBot = await Axios.get(
+        `https://api.ayblisting.com/bot?id=${bot.id}`
+      );
+      const owner = ayb.members.cache.get(aybBot?.data?.ownerid);
+      if (aybBot && owner) owners.push(owner);
+    });
+
     const embed = new MessageEmbed()
       .setColor("RED")
-      .setAuthor(
-        `${botsOfflineOverHour.length} bot(s) went offline 60 minutes ago and have not recovered`
-      )
+      .setAuthor(`${botsOfflineOverHour.length} bot(s) have gone offline`)
       .setDescription(
         `${botsOfflineOverHour
-          .map((b, i) => `**${i + 1}.** <@${b}> (${b.tag})`)
-          .join("\n")}\n*There are a total of ${
+          .map(
+            (b) => `- ${ayb.members.resolve(b) || "unkown-member"} (${b.tag})`
+          )
+          .join("\n")}\n*There is a total of ${
           bots.filter((b) => b.presence.status !== "offline").length
-        } bots offline`
+        } bots offline*`
       );
-    if (wh) await wh.send(embed);
+
+    if (wh) await wh.send(owners.join(", "), embed);
     else console.log(`[ERROR] Webhook not found`);
   }
 }
